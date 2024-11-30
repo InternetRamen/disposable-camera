@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Document</title>
+    </head>
+    <body>
+        <button id="login">Sign in with Google</button>
+        <script type="module">
+            import { initializeApp } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js";
+            import {
+                getAuth,
+                signInWithPopup,
+                GoogleAuthProvider,
+            } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-auth.js";
+            const firebaseConfig = {
+                apiKey: "AIzaSyC6J_xIOHL83kXlKfQ9R60dTWuG4Aoc_SA",
+                authDomain: "disposable-camera-b9bab.firebaseapp.com",
+                projectId: "disposable-camera-b9bab",
+                storageBucket: "disposable-camera-b9bab.firebasestorage.app",
+                messagingSenderId: "483138346883",
+                appId: "1:483138346883:web:598f32ca952c43751720b6",
+            };
+
+            const app = initializeApp(firebaseConfig);
+            const auth = getAuth();
+            const provider = new GoogleAuthProvider();
+
+            const login = document.getElementById("login");
+            login.addEventListener("click", () => {
+                signInWithPopup(auth, provider).then(() =>
+                    window.location.replace("/post.html")
+                );
+            });
+        </script>
+    </body>
+</html>

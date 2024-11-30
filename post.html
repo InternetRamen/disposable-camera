@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Document</title>
+    </head>
+    <body>
+        Welcome to the post page! Take 10 photos like a disposable camera and
+        upload it to the shared folder. The link will be sent out after the
+        event.
+        <form action="/upload">
+            <input type="file" name="photo" accept="image/*" multiple />
+            <button type="submit" id="submit">Upload</button>
+        </form>
+        <button id="logout">Sign out</button>
+
+        <script type="module">
+            import { initializeApp } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js";
+            import { getAuth } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-auth.js";
+            import {
+                getFirestore,
+                doc,
+                getDoc,
+                setDoc,
+                collection,
+                updateDoc,
+            } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-firestore.js";
+
+            // Initialize Cloud Firestore and get a reference to the service
+
+            const firebaseConfig = {
+                apiKey: "AIzaSyC6J_xIOHL83kXlKfQ9R60dTWuG4Aoc_SA",
+                authDomain: "disposable-camera-b9bab.firebaseapp.com",
+                projectId: "disposable-camera-b9bab",
+                storageBucket: "disposable-camera-b9bab.firebasestorage.app",
+                messagingSenderId: "483138346883",
+                appId: "1:483138346883:web:598f32ca952c43751720b6",
+            };
+
+            const app = initializeApp(firebaseConfig);
+            import {
+                getStorage,
+                ref,
+                uploadBytes,
+                getDownloadURL,
+                listAll,
+            } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-storage.js";
+            const db = getFirestore();
+            const storage = getStorage();
+            const auth = getAuth();
+            const submitButton = document.getElementById("submit");
+
+            document.addEventListener("DOMContentLoaded", () => {
+                auth.onAuthStateChanged((user) => {
+                    if (!user) {
+                        window.location.replace("/");
+                        return;
+                    } else {
+                        const imgDiv = document.getElementById("img");
+                        if (imgDiv.children.length > 0) {
+                            return;
+                        }
+                        const docRef = doc(db, "users", user.uid);
+                        getDoc(docRef).then((docSnap) => {
+                            const numOfPosts = docSnap.data().numOfPosts;
+
+                            const storageRef = ref(
+                                storage,
+                                `images/${user.uid}/`
+                            );
+                            listAll(storageRef)
+                                .then(async (res) => {
+                                    const { items } = res;
+                                    const urls = await Promise.all(
+                                        items.map((item) =>
+                                            getDownloadURL(item)
+                                        )
+                                    );
+                                    urls.forEach((url) => {
+                                        const img = document.createElement("img");
+                                        img.width = 100;
+                                        img.src = url;
+                                        imgDiv.appendChild(img);
+                                    });
+                                    console.log(urls);
+                                })
+                                .catch((error) => {
+                                    alert(error)
+                                });
+                        });
+                    }
+                });
+            });
+
+            submitButton.addEventListener("click", async (e) => {
+                e.preventDefault();
+                const user = auth.currentUser;
+
+                if (!user) {
+                    window.location.replace("/");
+                    return;
+                }
+
+                const docRef = doc(db, "users", user.uid);
+                let docSnap = await getDoc(docRef);
+                if (!docSnap.exists()) {
+                    await setDoc(doc(db, "users", user.uid), {
+                        email: user.email,
+                        numOfPosts: 0,
+                    });
+                    docSnap = await getDoc(docRef);
+                }
+
+                const numOfPosts = docSnap.data().numOfPosts;
+                console.log(numOfPosts);
+                if (numOfPosts >= 10) {
+                    alert("You have reached the limit of 10 photos.");
+                    return;
+                }
+
+                const file =
+                    document.querySelector('input[type="file"]').files[0];
+
+                const storageRef = ref(
+                    storage,
+                    `images/${user.uid}/${numOfPosts + 1}.${
+                        file.type.split("/")[1]
+                    }`
+                );
+
+                uploadBytes(storageRef, file).then(async (snapshot) => {
+                    alert("Uploaded!");
+                    await updateDoc(doc(db, "users", user.uid), {
+                        numOfPosts: numOfPosts + 1,
+                    });
+                    window.location.reload();
+                });
+            });
+
+            const logoutButton = document.getElementById("logout");
+            logoutButton.addEventListener("click", () => {
+                auth.signOut().then(() => {
+                    window.location.replace("/");
+                });
+            });
+        </script>
+        <div id="img"></div>
+    </body>
+</html>
